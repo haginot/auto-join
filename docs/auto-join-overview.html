@@ -11775,7 +11775,7 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="ABSTRACT">ABSTRACT<a class="anchor-link" href="#ABSTRACT">&#182;</a></h1>
+<h1 id="Auto-Join">Auto-Join<a class="anchor-link" href="#Auto-Join">&#182;</a></h1>
 </div>
 </div>
 </div>
@@ -11783,29 +11783,126 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="INTRODUCTION">INTRODUCTION<a class="anchor-link" href="#INTRODUCTION">&#182;</a></h1>
+<p>このエントリは<a href="https://adventar.org/calendars/3447#list-2018-12-12">ただの集団 Advent Calendar 2018</a>の13日目です。
+カレンダーの折返し地点です！</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>データアナリストにとっての悩みのひとつである、アドホックな分析における表結合。</p>
+<p>データソースの異なる複数システムからダンプされたデータや様々なオープンデータ、表計算ファイルなどに対して、キーとなるカラムのひな型が異なる場合、その表を結合するためには、分析の事前処理として、その変換の作業を行わなければなりません。</p>
+<p>E.Zhuらは "Auto-join: Joining tables by leveraging transformations." (E.Zhu, Y.He, and S.Chaudhuri, 2017) のなかで、この変換処理を自動的に構築し、与えられた2つの表に対して等結合を行う<code>Auto-Join</code>という仕組みを提案しました。</p>
+<p><code>Auto-Join</code>のアルゴリズムは、大規模なデータに対しても効率的に適用され、高い確率で正確な結合が可能であることを実験で評価しています。</p>
+<p>ここでは、同論文を解説しながら、Pythonで<code>Auto-Join</code>の実装を進めていきます。</p>
+<p><strong>Reference</strong>:<br>
+<a href="https://www.microsoft.com/en-us/research/publication/auto-join-joining-tables-leveraging-transformations/">E. Zhu, Y. He, and S. Chaudhuri. Auto-join: Joining tables by leveraging transformations. PVLDB, 10(10):1034-1045, 2017.</a></p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><img src="./images/figure.png" alt="Figures"></p>
+<p><strong>Figure 1</strong>:</p>
+<ul>
+<li>(left): US presidents and popular votes.   </li>
+<li>(right): US presidents and job approval rating. The right table uses last-name, comma, first-name, with (year-of-birth and yearof-death).</li>
+</ul>
+<p><strong>Figure 2</strong>:</p>
+<ul>
+<li>(left): Name and job titles in school. </li>
+<li>(right):Email and school districts. Email from the right table can be generated from name in the left by concatenating firstinitials, last-names, and ’@forsynth.k12.ga.us’.</li>
+</ul>
+<p><strong>Figure 3</strong>:</p>
+<ul>
+<li>(left): ATU name (for area team unit). </li>
+<li>(right): Sub-ATU names organized under ATU.</li>
+</ul>
+<p><strong>Figure 4</strong>:</p>
+<ul>
+<li>(left): ID and session name in separate fields.</li>
+<li>(right): Concatenated full session name.</li>
+</ul>
+<p><strong>Source of Figures</strong>:<br>
+<a href="https://www.microsoft.com/en-us/research/publication/auto-join-joining-tables-leveraging-transformations/">E. Zhu, Y. He, and S. Chaudhuri. Auto-join: Joining tables by leveraging transformations. PVLDB, 10(10):1034-1045, 2017.</a></p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h1 id="Equi-Join&#12398;&#38480;&#30028;">Equi-Join&#12398;&#38480;&#30028;<a class="anchor-link" href="#Equi-Join&#12398;&#38480;&#30028;">&#182;</a></h1><p>Auto-Joinが解決したい問題は何なのか。データを見ると理解が早いですね。異なるソースのデータを扱う場合 <code>Figure 1</code> のように、表結合しようにも、フォーマットが異なることが多々あります。
+データウェアハウスなどは、こうした問題が起こらないように、事前にETLを通じてデータクレンジングや前処理を行うですが、アドホックなデータ分析では、こういった前処理に多大な時間がかかってしまいます。</p>
+<p><code>Figure 1</code>:</p>
+<ul>
+<li>左: <code>GivenName [M. [M. ]]FamilyName</code></li>
+<li>右: <code>Familyname, Firstname[ M. M.](yyyy-[yyyy])</code></li>
+</ul>
+<p>このフォーマットの違いを修正する構文的変換を自動的に見つけることがこの論文のテーマです。</p>
+<p>比較対象の先行研究として、<code>fuzzy join</code> という方法が挙げられており、これはトークン分割、距離関数、しきい値の組み合わせを元に、キーの組み合わせを探索するもののようです。しかし、この方法はあらゆるデータの型に合わせるにはあまりにも計算量が大きく、またその値を決めることはとても難しいと考えられます。</p>
+<p>例えば、単語でトークン分割をする場合、</p>
+<p><code>Figure 1</code> の最後の行</p>
+<ul>
+<li><code>Ronald Reagan</code></li>
+<li><code>Reagan, Ronald(1911-2004)</code></li>
+</ul>
+<p>この組のJaccard距離（類似度）は$0.66$となるため、しきい値は少なくともこれ以上大きな値にならなければなりません。</p>
+<p>$$1.0-\frac{\left|v_s\cap v_t\right|}{\left|v_s\cup v_t\right|}=1.0-\frac{\left|\{Reagan\}\right|}{\left|\{Ronald, Regan, Ronald(1911-2004)\}\right|}=1.0-\frac{1}{3}=0.66$$</p>
+<p>しかし、しきい値を$0.66$とした場合、</p>
+<ul>
+<li><code>George W. Bush</code></li>
+<li><code>Bush, George H. W.(1924-)</code></li>
+</ul>
+<p>この組の類似度は$0.4$となり、これは正しい結果になりません。</p>
+<p>$$1.0-\frac{\left|v_s\cap v_t\right|}{\left|v_s\cup v_t\right|}=1.0-\frac{\left|\{George,W,Bush\}\right|}{\left|\{George,W,Bush,H,(1924-)\}\right|}=1.0-\frac{3}{5}=0.4$$</p>
+<p>しきい値に基づいた決定境界では常に正しくキーの組合せを見つけることが難しいことがわかります。</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h1 id="&#12356;&#12363;&#12395;&#12375;&#12390;&#21839;&#38988;&#12434;&#12392;&#12367;&#12363;">&#12356;&#12363;&#12395;&#12375;&#12390;&#21839;&#38988;&#12434;&#12392;&#12367;&#12363;<a class="anchor-link" href="#&#12356;&#12363;&#12395;&#12375;&#12390;&#21839;&#38988;&#12434;&#12392;&#12367;&#12363;">&#182;</a></h1><p>では、この問題にどのように取り組むべきか。文字の変換を行う手順を具体的に考えてみます。</p>
+<p><strong>Example 1.</strong><br>
+<code>Figure 1</code>の最初の行 $\{[Obama, Barack(1961-)], [47.0]\}$ を例に、どのように変換を行うかを考えてみましょう。</p>
+
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[1]:</div>
+<div class="prompt input_prompt">In&nbsp;[26]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">m</span> <span class="o">=</span> <span class="s1">&#39;takahiro.hagino@bizreach.co.jp&#39;</span>
-</pre></div>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># 1. Input row X with two elements:</span>
+<span class="c1"># (&#39;Obama, Barack(1961)&#39;, [47.0])</span>
+<span class="n">X</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;Obama, Barack(1961)&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mf">47.0</span><span class="p">])</span>
 
-</div>
-</div>
-</div>
 
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[9]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="p">[</span><span class="n">m</span><span class="p">[</span><span class="n">c</span><span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="n">m</span><span class="p">)]</span> <span class="o">+</span> <span class="s1">&#39;$&#39;</span> <span class="o">*</span> <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">m</span><span class="p">))]</span>
+<span class="c1"># 2. Take the first item X[0], Split by &quot;(&quot;, produce Y:</span>
+<span class="c1"># [&#39;Obama, Barack&#39;, &#39;1961)&#39;]</span>
+<span class="n">Y</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">)</span>
+
+<span class="c1"># 3. Take the first item Y[0], Split by &quot;,&quot;, produce Z:</span>
+<span class="c1"># [&#39;Obama&#39;, &#39; Barack&#39;]</span>
+<span class="n">Z</span> <span class="o">=</span> <span class="n">Y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+
+<span class="c1"># 4. Takes Substring [1:] from Z[1], produce T:</span>
+<span class="c1"># &#39;Barack&#39;</span>
+<span class="n">T</span> <span class="o">=</span> <span class="n">Z</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">:]</span>
+
+<span class="c1"># 5. Concat T, a constant string &quot; &quot; and Z[0],</span>
+<span class="s2">&quot;Produced value: [</span><span class="si">%s</span><span class="s2">]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">T</span><span class="p">,</span> <span class="n">Z</span><span class="p">[</span><span class="mi">0</span><span class="p">]]))</span>
 </pre></div>
 
 </div>
@@ -11818,42 +11915,13 @@ div#notebook {
 
 <div class="output_area">
 
-<div class="prompt output_prompt">Out[9]:</div>
+<div class="prompt output_prompt">Out[26]:</div>
 
 
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>[&#39;takahiro.hagino@bizreach.co.jp&#39;,
- &#39;akahiro.hagino@bizreach.co.jp$&#39;,
- &#39;kahiro.hagino@bizreach.co.jp$$&#39;,
- &#39;ahiro.hagino@bizreach.co.jp$$$&#39;,
- &#39;hiro.hagino@bizreach.co.jp$$$$&#39;,
- &#39;iro.hagino@bizreach.co.jp$$$$$&#39;,
- &#39;ro.hagino@bizreach.co.jp$$$$$$&#39;,
- &#39;o.hagino@bizreach.co.jp$$$$$$$&#39;,
- &#39;.hagino@bizreach.co.jp$$$$$$$$&#39;,
- &#39;hagino@bizreach.co.jp$$$$$$$$$&#39;,
- &#39;agino@bizreach.co.jp$$$$$$$$$$&#39;,
- &#39;gino@bizreach.co.jp$$$$$$$$$$$&#39;,
- &#39;ino@bizreach.co.jp$$$$$$$$$$$$&#39;,
- &#39;no@bizreach.co.jp$$$$$$$$$$$$$&#39;,
- &#39;o@bizreach.co.jp$$$$$$$$$$$$$$&#39;,
- &#39;@bizreach.co.jp$$$$$$$$$$$$$$$&#39;,
- &#39;bizreach.co.jp$$$$$$$$$$$$$$$$&#39;,
- &#39;izreach.co.jp$$$$$$$$$$$$$$$$$&#39;,
- &#39;zreach.co.jp$$$$$$$$$$$$$$$$$$&#39;,
- &#39;reach.co.jp$$$$$$$$$$$$$$$$$$$&#39;,
- &#39;each.co.jp$$$$$$$$$$$$$$$$$$$$&#39;,
- &#39;ach.co.jp$$$$$$$$$$$$$$$$$$$$$&#39;,
- &#39;ch.co.jp$$$$$$$$$$$$$$$$$$$$$$&#39;,
- &#39;h.co.jp$$$$$$$$$$$$$$$$$$$$$$$&#39;,
- &#39;.co.jp$$$$$$$$$$$$$$$$$$$$$$$$&#39;,
- &#39;co.jp$$$$$$$$$$$$$$$$$$$$$$$$$&#39;,
- &#39;o.jp$$$$$$$$$$$$$$$$$$$$$$$$$$&#39;,
- &#39;.jp$$$$$$$$$$$$$$$$$$$$$$$$$$$&#39;,
- &#39;jp$$$$$$$$$$$$$$$$$$$$$$$$$$$$&#39;,
- &#39;p$$$$$$$$$$$$$$$$$$$$$$$$$$$$$&#39;]</pre>
+<pre>&#39;Produced value: [Barack Obama]&#39;</pre>
 </div>
 
 </div>
@@ -11866,7 +11934,53 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h4 id="Solution-Overview.">Solution Overview.<a class="anchor-link" href="#Solution-Overview.">&#182;</a></h4><h5 id="Step1:-Find-Joinable-Row-Pairs.">Step1: Find Joinable Row Pairs.<a class="anchor-link" href="#Step1:-Find-Joinable-Row-Pairs.">&#182;</a></h5><h5 id="Step2:-Learn-Transformation.">Step2: Learn Transformation.<a class="anchor-link" href="#Step2:-Learn-Transformation.">&#182;</a></h5><h5 id="Step3:-Constrained-Fuzzy-Join.">Step3: Constrained Fuzzy Join.<a class="anchor-link" href="#Step3:-Constrained-Fuzzy-Join.">&#182;</a></h5><table>
+<p>上述の例のように、分割、連結、文字切出し、などの操作を加えることで、キーを変換する必要があります。
+この問題を定義すると次のようになります。</p>
+<p><strong>Definition 1.</strong>
+<em>Transformation Join Problem:</em>
+Given two tables $T_s, T_t,$ and a predefined set of operators $\Omega$, find a transformation $P=o_1\cdot o_2\cdot o_3\cdot ...o_n$, using operators $o_i \in \Omega$, such that $P(T_s)$ can equi-join with key columns of $T_t$.</p>
+<p>$P(T_s)$の操作を行うことで、$T_t$のキー列と結合できるような列を作る$P$を発見することがこの問題の定義です。
+$\Omega$は次のような操作関数の集合です。$\Omega$は要件に応じて操作を追加し拡張することも可能です。</p>
+<p>$$\Omega = \{Split, Concat, Substring, Constant, SelectK\}$$</p>
+<p>ただしこの問題は、<code>1:1 join (key:key)</code>もしくは<code>N:1 join (foreign-key:key)</code>を扱うものとします。</p>
+<p>この問題では、ソースとなる$T_s$と、ターゲットとなる$T_t$のテーブルがそれぞれ存在しますが、
+はじめは、どちらが、どちらであるかはわかりません。そのため、両方向から操作を行うことで、適切な方向を見つけます。</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Solution-Overview.">Solution Overview.<a class="anchor-link" href="#Solution-Overview.">&#182;</a></h2><h5 id="Step1:-Find-Joinable-Row-Pairs.">Step1: Find Joinable Row Pairs.<a class="anchor-link" href="#Step1:-Find-Joinable-Row-Pairs.">&#182;</a></h5><p>この問題を解く上で、$T_s$と$T_t$それぞれの値の組合せに対して計算量は二次的に増加してしまいます。
+そこで、まずは一意な$q$-gramを使って行同士の関係性を見つけるというやり方で、行の組合せをを推測し計算を効率化する手順を踏みます。</p>
+<h5 id="Step2:-Learn-Transformation.">Step2: Learn Transformation.<a class="anchor-link" href="#Step2:-Learn-Transformation.">&#182;</a></h5><p>前の手順で得られた行の組合せを基に、$T_s$を$T_t$のキー列の型へ変換する操作を学習します。
+先に見た、 <code>Example 1</code> のように、最も単純な変換操作を、異なる複数の行の組から繰り返しの学習を行います。</p>
+<h5 id="Step3:-Constrained-Fuzzy-Join.">Step3: Constrained Fuzzy Join.<a class="anchor-link" href="#Step3:-Constrained-Fuzzy-Join.">&#182;</a></h5><p>不揃いで、汚いデータを扱う際に、そうした汚れを許容するための手順です。
+たとえば、 <code>Figure 2</code> の右表2行目 <code>mipayne@forsyth.k12.ga.us</code> は他の行のルールに従うならば、 <code>mpayne@forsyth.k12.ga.us</code> でなければなりません。
+こうしたデータでの結合のカバレッジを広げるために、ここではfuzzy joinの自動調節をおこないます。</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h1 id="AUTO-JOIN&#12398;&#12383;&#12417;&#12398;2&#12388;&#12398;&#12473;&#12486;&#12483;&#12503;">AUTO-JOIN&#12398;&#12383;&#12417;&#12398;2&#12388;&#12398;&#12473;&#12486;&#12483;&#12503;<a class="anchor-link" href="#AUTO-JOIN&#12398;&#12383;&#12417;&#12398;2&#12388;&#12398;&#12473;&#12486;&#12483;&#12503;">&#182;</a></h1><p>Auto-Joinを実装するための、はじめの2ステップについて、まずは考えていきましょう。</p>
+<h2 id="Step-1:-Finding-Joinable-Row-Pairs">Step 1: Finding Joinable Row Pairs<a class="anchor-link" href="#Step-1:-Finding-Joinable-Row-Pairs">&#182;</a></h2><p><code>Definition 1</code>でも記述したように、変換$P$を施すことによって結合可能な行組を<code>joinable row pair</code>と定義する。</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><strong>Table 1</strong>: Notations used for analyzing q-gram matches<br>
+また、$q$-gram 一致の分析をするにあたって、記法も整理しておきます。</p>
+<table>
 <thead><tr>
 <th style="text-align:left">Symbol</th>
 <th style="text-align:left">Description</th>
@@ -11899,8 +12013,9 @@ div#notebook {
 </tr>
 </tbody>
 </table>
-<p><strong>example</strong>
-$$Q_5(Database)=\{Datab,ataba,tabas,abase\}$$</p>
+<p>$Q_q(C)$は与えられた文字列に対して、指定された$q$で分割された$q$-gramの部分列集合を返します。<br>
+<strong>example</strong>:</p>
+<p>$$Q_5(Database)=\{Datab,ataba,tabas,abase\}$$</p>
 
 </div>
 </div>
@@ -11909,17 +12024,17 @@ $$Q_5(Database)=\{Datab,ataba,tabas,abase\}$$</p>
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="3.1.1-1-to-1-q-Gram-Match">3.1.1 1-to-1 q-Gram Match<a class="anchor-link" href="#3.1.1-1-to-1-q-Gram-Match">&#182;</a></h3><ul>
+<h3 id="1-to-1-q-Gram-Match">1-to-1 q-Gram Match<a class="anchor-link" href="#1-to-1-q-Gram-Match">&#182;</a></h3><p>$T_s$と$T_t$の両方に、一意の$q$-gramが存在するとしたら、その行はまず間違いなく<code>joinable row</code>であることは直感的にわかります。（<code>Figure 1</code>では、<code>Barack</code>という$q$-gramはこれに当たりますね）</p>
+<p>ここで次のように、$p_q(k)$という式を定義してみましょう。
+$k$が大きい、つまり、その$q$-gramの発生頻度が低い場合、その確率は低くなるので、感覚的に理解ができます。</p>
+<p>$$p_q(k)=\frac
+{\frac{1}{k^{s_q}}}
+{\sum_{z=1}^{N}\frac{1}{z^{s_q}}}$$</p>
+<ul>
 <li>$p_q(k)$ : the <em>probability</em> mass function for a $q$-gram whose frequency ranks at position k among all $q$-grams<ul>
 <li>ある$q$-gram がすべての$q$-gram中の、$k$番目になる確率</li>
 </ul>
 </li>
-</ul>
-<p>$$
-p_q(k)=\frac
-{\frac{1}{k^{s_q}}}
-{\sum_{z=1}^{N}\frac{1}{z^{s_q}}}$$</p>
-<ul>
 <li>$k$ : rank of a <code>q-gram</code> by frequency （頻出度ランク）</li>
 <li>$N$ : total number of <code>g-gram</code></li>
 <li>$s_q$ : constant for a given $q$</li>
@@ -11932,32 +12047,7 @@ p_q(k)=\frac
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>$$\Omega = \{Split, Concat, Substring, Constant, SelectK\}$$</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p><strong>Definition 1.</strong>
-<em>Transformation Join Problem:</em>
-Given two tables $T_s, T_t,$ and a predefined set of operators $\Omega$, find a transformation $P=o_1\cdot o_2\cdot o_3\cdot ...o_n$, using operators $o_i \in \Omega$, such that $P(T_s)$ can equi-join with key columns of $T_t$.</p>
-<ul>
-<li>$P(T_s)$ equi-join with key columns of $T_t$<ul>
-<li>分割、連結、切出しなどの操作を加えて、$T_s$を$T_t$に変換する操作$P(T)$を発見しましょう</li>
-</ul>
-</li>
-</ul>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
+<p>この$P_q(k)$式をもとに、次の命題を立てましょう。</p>
 <p><strong>Proposition 1.</strong>
 Given two columns $C_s$ and $C_t$ from
 tables $T_s$ and $T_t$ respectively, each with $N$ $q$-grams from an
@@ -11965,9 +12055,10 @@ alphabet of size $\left|\Sigma\right|$ that follow the power-law distribution
 above. The probability that a $q$-gram appears exactly once
 in both $C_s$ and $C_t$ by chance is bounded from above by the
 following.</p>
-<blockquote><p>TODO
-$$\sum{|\Sigma|^q}{k=1}\big(\big)^2$$</p>
-</blockquote>
+<p>$$\sum_{k=1}^{|\Sigma|^q} \big( (1-p_q(k))^{N-1} \cdot p_q(k) \big)^2$$</p>
+<p>すべての$q$-gramの数を$N$、またそれを構成するアルファベットの文字数を$\left|\Sigma\right|$とおくと、$q$-gramが$C_s$, $C_t$に一度だけ出現する確率は命題のように表すことができます。<br>
+命題の証明については、参考論文の<code>Appendix C</code>を参照ください。
+$N$数が増えるほど、この確率は指数関数的に小さくなります。</p>
 
 </div>
 </div>
@@ -11976,6 +12067,12 @@ $$\sum{|\Sigma|^q}{k=1}\big(\big)^2$$</p>
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
+<p>1-to-1 $q$-gram matchのまとめとして、1-to-1マッチが起きる条件を、次のように定義することにします。</p>
+<p><strong>Definition 2.</strong>
+Let $g$ be a $q$-gram with $g \in Q_q(v_s)$ and
+$g \in Q_q(v_t)$. If $F_q(g, C_s) = 1$ and $F_q(g, C_t) = 1$, then $g$ is
+a 1-to-1 $q$-gram match between row pair $R_s$ and $R_t$ with
+respect to the pair of column $C_s$ and $C_t$.</p>
 <ul>
 <li>$Q_q(C)$ : the multi-set of all the $q$-grams of distinct values in column $C$</li>
 <li>$F_q(g, C)$ : the number of occurences of a $q$-gram $g \in Q_q(C)$. <ul>
@@ -11985,19 +12082,6 @@ $$\sum{|\Sigma|^q}{k=1}\big(\big)^2$$</p>
 <li>$v_s$ : the cell value at row $R_s$ column $C_s$ in $T_s$</li>
 <li>$v_t$ : the cell value at row $R_t$ column $C_t$ in $T_t$</li>
 </ul>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p><strong>Definition 2.</strong>
-Let $g$ be a $q$-gram with $g \in Q_q(v_s)$ and
-$g \in Q_q(v_t)$. If $F_q(g, C_s) = 1$ and $F_q(g, C_t) = 1$, then $g$ is
-a 1-to-1 $q$-gram match between row pair $R_s$ and $R_t$ with
-respect to the pair of column $C_s$ and $C_t$.</p>
 
 </div>
 </div>
@@ -12272,6 +12356,40 @@ Therefore, $q^*$ is only obtained at the conditions mentioned above, and is not 
 
 </div>
 </div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[16]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">m</span> <span class="o">=</span> <span class="s1">&#39;co.jp&#39;</span>
+<span class="p">[</span><span class="n">m</span><span class="p">[</span><span class="n">c</span><span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="n">m</span><span class="p">)]</span> <span class="o">+</span> <span class="s1">&#39;$&#39;</span> <span class="o">*</span> <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">m</span><span class="p">))]</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt output_prompt">Out[16]:</div>
+
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>[&#39;co.jp&#39;, &#39;o.jp$&#39;, &#39;.jp$$&#39;, &#39;jp$$$&#39;, &#39;p$$$$&#39;]</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
 </div>
     </div>
   </div>
