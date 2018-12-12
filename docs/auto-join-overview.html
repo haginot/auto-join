@@ -11775,7 +11775,7 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Auto-Join">Auto-Join<a class="anchor-link" href="#Auto-Join">&#182;</a></h1>
+<h1 id="AUTO-JOIN-&#26360;&#24335;&#12398;&#25539;&#12431;&#12394;&#12356;&#34920;&#12434;&#31561;&#32080;&#21512;&#12377;&#12427;&#22793;&#25563;&#12398;&#23398;&#32722;">AUTO-JOIN <em>&#26360;&#24335;&#12398;&#25539;&#12431;&#12394;&#12356;&#34920;&#12434;&#31561;&#32080;&#21512;&#12377;&#12427;&#22793;&#25563;&#12398;&#23398;&#32722;</em><a class="anchor-link" href="#AUTO-JOIN-&#26360;&#24335;&#12398;&#25539;&#12431;&#12394;&#12356;&#34920;&#12434;&#31561;&#32080;&#21512;&#12377;&#12427;&#22793;&#25563;&#12398;&#23398;&#32722;">&#182;</a></h1><h5 id="Ep.1-Finding-Joinable-Row-Pairs">Ep.1 Finding Joinable Row Pairs<a class="anchor-link" href="#Ep.1-Finding-Joinable-Row-Pairs">&#182;</a></h5>
 </div>
 </div>
 </div>
@@ -11794,7 +11794,7 @@ div#notebook {
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>データアナリストにとっての悩みのひとつである、アドホックな分析における表結合。</p>
-<p>データソースの異なる複数システムからダンプされたデータや様々なオープンデータ、表計算ファイルなどに対して、キーとなるカラムのひな型が異なる場合、その表を結合するためには、分析の事前処理として、その変換の作業を行わなければなりません。</p>
+<p>データソースの異なる複数システムからダンプされたデータや様々なオープンデータ、表計算ファイルなどに対して、キーとなるカラムの書式、型が異なる場合、その表を結合するためには、分析の事前処理として、その変換の作業を行わなければなりません。</p>
 <p>E.Zhuらは "Auto-join: Joining tables by leveraging transformations." (E.Zhu, Y.He, and S.Chaudhuri, 2017) のなかで、この変換処理を自動的に構築し、与えられた2つの表に対して等結合を行う<code>Auto-Join</code>という仕組みを提案しました。</p>
 <p><code>Auto-Join</code>のアルゴリズムは、大規模なデータに対しても効率的に適用され、高い確率で正確な結合が可能であることを実験で評価しています。</p>
 <p>ここでは、同論文を解説しながら、Pythonで<code>Auto-Join</code>の実装を進めていきます。</p>
@@ -12082,6 +12082,7 @@ respect to the pair of column $C_s$ and $C_t$.</p>
 <li>$v_s$ : the cell value at row $R_s$ column $C_s$ in $T_s$</li>
 <li>$v_t$ : the cell value at row $R_t$ column $C_t$ in $T_t$</li>
 </ul>
+<p>E.Zhu(2017)らの実験では、実データのベンチマークでは1-to-1 $q$-gramによる組合せは95.6%の精度となったようです。</p>
 
 </div>
 </div>
@@ -12090,7 +12091,8 @@ respect to the pair of column $C_s$ and $C_t$.</p>
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="3.1.2-General-n-to-m-q-Gram-Match">3.1.2 General n-to-m q-Gram Match<a class="anchor-link" href="#3.1.2-General-n-to-m-q-Gram-Match">&#182;</a></h3>
+<h3 id="General-n-to-m-q-Gram-Match">General n-to-m q-Gram Match<a class="anchor-link" href="#General-n-to-m-q-Gram-Match">&#182;</a></h3><p>実世界の問題では、$q$-gramの組合せが1-to-1になることは稀であるため、より現実的な場合を考えていきましょう。</p>
+
 </div>
 </div>
 </div>
@@ -12111,10 +12113,8 @@ and $C_t$.</p>
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<ul>
-<li>$\frac{1}{n \cdot m}$ : quantify the “goodness” of the
-match.</li>
-</ul>
+<p>We use $\frac{1}{n \cdot m}$ to quantify the “goodness” of the match.</p>
+<p>と言われているように、この問題は$n\cdot m$の最小化問題として考えることができます。</p>
 
 </div>
 </div>
@@ -12123,246 +12123,29 @@ match.</li>
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>test all possible $q$-grams</p>
-<p>$g^*$ as the best prefix of all possible suffixes of $v$</p>
-<p>$$g^*=
-\underset{
-\forall_g \in \operatorname{Prefixes}(u), 
-u \in \operatorname{Suffixes}(v)}
-{\operatorname{arg max}} \frac{1}{nm}$$</p>
-<blockquote><p>最強の$q$-グラム$g^*$を決めよう</p>
-</blockquote>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>$n=F(g,C_s)\gt0$ and $m=F(g,C_t)\gt0$</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p><strong>Proposition 2.</strong>
-<em>Let $g_u^q$ be a prefix of a suffix $u$ with length $q$. As the length increases by 1 and  $g_u^q$ extends at the end, the $\frac{1}{nm}$ score of the longer prefix $g_u^{q+1}$ is monotonically non-increasing, or $F(g_u^{q+1},C_s) \le F(g_u^q,C_s)$</em> and $F(g_u^{q+1},C_t) \le F(g_u^q,C_t)$.</p>
-<blockquote><p>A proof of this can be found in Appendix C.</p>
-</blockquote>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="3.1.4-Putting-it-together:-Find-Joinable-Rows">3.1.4 Putting it together: Find Joinable Rows<a class="anchor-link" href="#3.1.4-Putting-it-together:-Find-Joinable-Rows">&#182;</a></h3>
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>iterate through distinct value $v \in C_s$, and use
-$\operatorname{OptimalQGram}$
-to efficiently find the best $q$-gram match</p>
-<ul>
-<li>$\{g^*, score, R_s, R_t\} \leftarrow \operatorname{OptimalQGram}(v, C_t)$<ul>
-<li>この問題は$\frac{1}{nm}$を最大化するgを見つけることが命題であり、$g^*$のときのペアとなる行とそのスコア$score=\frac{1}{nm}$である。</li>
-</ul>
-</li>
-</ul>
-<p>Suffixインデックスのすべてに対して</p>
-<p>$$\forall_u \in \operatorname{Suffixes}(v)$$
-ベストな$q$を
-$$q^* \leftarrow \operatorname{BinarySearchQ}(u, C_t)$$</p>
-<ul>
-<li>$\operatorname{BinarySearchQ}(u,C)$ performs the binary search of $q^*$ that finds $g_u^{q^*}$<ul>
-<li>あるCのなかで</li>
-</ul>
-</li>
-</ul>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[8]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># [&#39;takahiro&#39;, &#39;takuya&#39;, &#39;shingo&#39;, &#39;tsuyoshi&#39;]</span>
-<span class="n">m</span><span class="o">=</span><span class="s1">&#39;takahiro&#39;</span><span class="p">;[</span><span class="n">m</span><span class="p">[</span><span class="n">c</span><span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="n">m</span><span class="p">)]</span> <span class="o">+</span> <span class="s1">&#39;$&#39;</span> <span class="o">*</span> <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">m</span><span class="p">))]</span>
-</pre></div>
-
-</div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-<div class="prompt output_prompt">Out[8]:</div>
-
-
-
-
-<div class="output_text output_subarea output_execute_result">
-<pre>[&#39;takahiro&#39;,
- &#39;akahiro$&#39;,
- &#39;kahiro$$&#39;,
- &#39;ahiro$$$&#39;,
- &#39;hiro$$$$&#39;,
- &#39;iro$$$$$&#39;,
- &#39;ro$$$$$$&#39;,
- &#39;o$$$$$$$&#39;]</pre>
-</div>
-
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[12]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">m</span><span class="o">=</span><span class="s1">&#39;takahiro&#39;</span>
-<span class="n">u</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span><span class="p">[</span><span class="n">c</span><span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="n">m</span><span class="p">)]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">m</span><span class="p">))][</span><span class="mi">2</span><span class="p">]</span>
-<span class="n">ct</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;takahiro&#39;</span><span class="p">,</span> <span class="s1">&#39;takuya&#39;</span><span class="p">,</span> <span class="s1">&#39;shingo&#39;</span><span class="p">,</span> <span class="s1">&#39;tsuyoshi&#39;</span><span class="p">]</span>
-<span class="k">def</span> <span class="nf">binary_search_q</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">ct</span><span class="p">):</span>
-    <span class="n">a</span> <span class="o">=</span> <span class="mi">3</span>
-    <span class="n">b</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
-    <span class="k">while</span> <span class="n">a</span> <span class="o">&lt;</span> <span class="n">b</span><span class="p">:</span>
-        <span class="n">h</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="p">(</span><span class="n">b</span> <span class="o">-</span> <span class="n">a</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span> <span class="c1"># TODO ???</span>
-        <span class="n">rt</span> <span class="o">=</span> <span class="n">query_index</span><span class="p">(</span><span class="n">ct</span><span class="p">,</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">h</span><span class="p">])</span>
-        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">rt</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">a</span> <span class="o">=</span> <span class="n">h</span> <span class="o">+</span> <span class="mi">1</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">b</span> <span class="o">=</span> <span class="n">h</span>
-    <span class="k">return</span> <span class="n">a</span> <span class="o">-</span> <span class="mi">1</span>
-</pre></div>
-
-</div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-<div class="prompt output_prompt">Out[12]:</div>
-
-
-
-
-<div class="output_text output_subarea output_execute_result">
-<pre>&#39;kahiro&#39;</pre>
-</div>
-
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[4]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># TODO Mの型</span>
-<span class="c1"># OptimalQGramfind best q-gram match</span>
-<span class="c1"># how get KeyColumns() from T_t</span>
-<span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">This function is based on </span>
-<span class="sd">- Algorithm 1 Find joinable row pairs</span>
-<span class="sd">- Algorithm 3 Complete pseudo code for joinable row pair</span>
-<span class="sd">ts:</span>
-<span class="sd">    T_s subject table</span>
-<span class="sd">    Dataframe</span>
-<span class="sd">tt:</span>
-<span class="sd">    T_t target table</span>
-<span class="sd">    Dataframe</span>
-<span class="sd">&quot;&quot;&quot;</span>
-<span class="k">def</span> <span class="nf">FindJoinableRowPairs</span><span class="p">(</span><span class="n">ts</span><span class="p">,</span> <span class="n">tt</span><span class="p">):</span>
-    <span class="n">m</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">for</span> <span class="n">cs</span> <span class="ow">in</span> <span class="n">ts</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">ct</span> <span class="ow">in</span> <span class="n">keycolumns</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
-            <span class="n">cs</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">optimal_qgram</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">ct</span><span class="p">))</span>
-            <span class="n">m</span><span class="o">.</span><span class="n">append</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">m</span><span class="o">.</span><span class="n">groupby</span><span class="p">()</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s1">&#39;score&#39;</span><span class="p">)</span>
-</pre></div>
-
-</div>
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="E.-DETAILED-PSEUDO-CODE">E. DETAILED PSEUDO CODE<a class="anchor-link" href="#E.-DETAILED-PSEUDO-CODE">&#182;</a></h1><h2 id="E.1-Find-Joinable-Row-Pairs">E.1 Find Joinable Row Pairs<a class="anchor-link" href="#E.1-Find-Joinable-Row-Pairs">&#182;</a></h2><ul>
-<li>$\operatorname{KeyColumns}(T)$ : returns all the single columns that is part of a key column in the table $T$.</li>
-<li>$\operatorname{Suffixes}(v)$ : returns all suffixes of a value $v$.</li>
-<li>$\operatorname{QueryIndex}(C,g)$ : uses a suffix array index built for the column $C$, and returns a list of rows containing $g$.</li>
-<li>$\operatorname{MaxByScore}$ : returns the optimal row pairs with the hightest score.</li>
-<li>$q^*$ : leads to the highest score should results in the smallest possible non-zero number of matches in $C_t$.<ul>
-<li>マッチ数が少なければ$\frac{1}{mn}$は大きくなる</li>
-</ul>
-</li>
-<li>$r_t$ : the matching rows in $C_t$ returned by $\operatorname{QueryIndex}$<ul>
-<li>calling $\operatorname{QueryIndex}(C_t,g_u^{q^*})$ results in $|r_t| \ge 1$, while calling $\operatorname{QueryIndex}(C_t,g_u^{q+1^*})$ results in $|r_t|=0$.</li>
-</ul>
-</li>
-</ul>
-<p><strong>TODO</strong></p>
-<ul>
-<li>search "suffix array index" in this paper.</li>
-</ul>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>$C_s$ is not needed in finding $g_u^{q^*}$</p>
+<h3 id="Efficient-Search-of-q-Gram-Matches">Efficient Search of q-Gram Matches<a class="anchor-link" href="#Efficient-Search-of-q-Gram-Matches">&#182;</a></h3><p>最後に、この一致する$q$-gramの探索を効率よく計算する方法を考えていきましょう。</p>
+<p>一致する$q$-gramを探索する単純なアルゴリズムを考えると、次のようになります。</p>
 <ol>
-<li>$n=|r_s|&gt;0$</li>
-<li><p>when $m=|r_t|=0$, the score $\frac{1}{nm}$ becomes undefined and thus the corresponding $q$ is infeasible.
-Therefore, $q^*$ is only obtained at the conditions mentioned above, and is not dependent on $C_s$.</p>
-</li>
-<li><p>$\operatorname{BinarySearchQ}(u,C)$ performs the binary search of $q^*$ that finds $g_u^{q^*}$ in $C$.</p>
-</li>
-<li>最適な$q$、つまりサフィックスに対してもっとも長いプレフィックスを見つけることのできる$q$を、バイナリサーチをかけることで見つけます</li>
-<li>$q\lt3$のときはパフォーマンスに影響が出るため、ブレイカーを設けている</li>
+<li>すべてのセルに対して</li>
+<li>すべての設定可能な$q$について</li>
+<li>トークナイズされたそれぞれの$q$-gramについて</li>
+<li>テーブルのなかの、すべての値をイテレートして一致する$q$-gramを数え、これを$n$とし、</li>
+<li>別のテーブルのなかのすべての値をイテレートして一致する$a$-gramを数え、これを$m$とする</li>
 </ol>
+<p>これは、<code>n-to-m match</code>として表すことができますが、見るからに非効率なやり方に思えます。</p>
+<p>まずはじめに、2つのテーブルのすべてのカラムについて<code>suffix array index</code> を作成します。
+対数的な計算量になるような工夫を施し、$S$はユニークなSuffixの数として計算量を$O(log S)$とすることができます。</p>
+<p><code>suffix array index</code>の生成例を次に示します。</p>
 
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[16]:</div>
+<div class="prompt input_prompt">In&nbsp;[29]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">m</span> <span class="o">=</span> <span class="s1">&#39;co.jp&#39;</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">m</span> <span class="o">=</span> <span class="s1">&#39;thagino@tadano.co.jp&#39;</span>
 <span class="p">[</span><span class="n">m</span><span class="p">[</span><span class="n">c</span><span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="n">m</span><span class="p">)]</span> <span class="o">+</span> <span class="s1">&#39;$&#39;</span> <span class="o">*</span> <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">m</span><span class="p">))]</span>
 </pre></div>
 
@@ -12376,13 +12159,32 @@ Therefore, $q^*$ is only obtained at the conditions mentioned above, and is not 
 
 <div class="output_area">
 
-<div class="prompt output_prompt">Out[16]:</div>
+<div class="prompt output_prompt">Out[29]:</div>
 
 
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>[&#39;co.jp&#39;, &#39;o.jp$&#39;, &#39;.jp$$&#39;, &#39;jp$$$&#39;, &#39;p$$$$&#39;]</pre>
+<pre>[&#39;thagino@tadano.co.jp&#39;,
+ &#39;hagino@tadano.co.jp$&#39;,
+ &#39;agino@tadano.co.jp$$&#39;,
+ &#39;gino@tadano.co.jp$$$&#39;,
+ &#39;ino@tadano.co.jp$$$$&#39;,
+ &#39;no@tadano.co.jp$$$$$&#39;,
+ &#39;o@tadano.co.jp$$$$$$&#39;,
+ &#39;@tadano.co.jp$$$$$$$&#39;,
+ &#39;tadano.co.jp$$$$$$$$&#39;,
+ &#39;adano.co.jp$$$$$$$$$&#39;,
+ &#39;dano.co.jp$$$$$$$$$$&#39;,
+ &#39;ano.co.jp$$$$$$$$$$$&#39;,
+ &#39;no.co.jp$$$$$$$$$$$$&#39;,
+ &#39;o.co.jp$$$$$$$$$$$$$&#39;,
+ &#39;.co.jp$$$$$$$$$$$$$$&#39;,
+ &#39;co.jp$$$$$$$$$$$$$$$&#39;,
+ &#39;o.jp$$$$$$$$$$$$$$$$&#39;,
+ &#39;.jp$$$$$$$$$$$$$$$$$&#39;,
+ &#39;jp$$$$$$$$$$$$$$$$$$&#39;,
+ &#39;p$$$$$$$$$$$$$$$$$$$&#39;]</pre>
 </div>
 
 </div>
@@ -12390,6 +12192,197 @@ Therefore, $q^*$ is only obtained at the conditions mentioned above, and is not 
 </div>
 </div>
 
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><code>suffix array</code>を使うことで、$q$-gramの探索においてバイナリ探索を用いることで効率化が可能です。</p>
+<ul>
+<li>$g^*$: as the best prefix of all possible suffixes of $v$<ul>
+<li>$v$の取りうるすべてのSuffixに対して、最も当てはまりのよい最強の$q$-gramを$g^*$として、この$g^*$を決めるという問題に置き換えます。</li>
+</ul>
+</li>
+</ul>
+<p>$$g^*=
+\underset{
+\forall_g \in \operatorname{Prefixes}(u), 
+u \in \operatorname{Suffixes}(v)}
+{\operatorname{arg max}} \frac{1}{nm}$$</p>
+<p>$n=F(g,C_s)\gt0$ and $m=F(g,C_t)\gt0$は$C_s$と$C_t$それぞれに一致する数です。
+このとき、$q$について、次のような命題を立てましょう。</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><strong>Proposition 2.</strong>
+<em>Let $g_u^q$ be a prefix of a suffix $u$ with length $q$. As the length increases by 1 and  $g_u^q$ extends at the end, the $\frac{1}{nm}$ score of the longer prefix $g_u^{q+1}$ is monotonically non-increasing, or $F(g_u^{q+1},C_s) \le F(g_u^q,C_s)$</em> and $F(g_u^{q+1},C_t) \le F(g_u^q,C_t)$.</p>
+<p>命題の証明については、参考論文のAppendix Cを参照ください。</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Putting-it-together:-Find-Joinable-Rows">Putting it together: Find Joinable Rows<a class="anchor-link" href="#Putting-it-together:-Find-Joinable-Rows">&#182;</a></h3><p>それでは、ここまでの議論を用いて、実際に探索のアルゴリズムを構築していきましょう。</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><strong>Algorithm 1</strong></p>
+<p>$C_s$のユニークな値$v \in C_s$について$\operatorname{OptimalQGram}$を適用します。
+先の命題で定めたように、これは最適な$q$-gramを探索する問題の過程です。</p>
+<p>$$\{g^*, score, R_s, R_t\} \leftarrow \operatorname{OptimalQGram}(v, C_t)$$</p>
+<p>この問題は$\frac{1}{nm}$を最大化するgを見つけることが命題であり、$g^*$のときのペアとなる行とそのスコア$score=\frac{1}{nm}$である。</p>
+<p>Suffixインデックスのすべてに対して</p>
+<p>$$\forall_u \in \operatorname{Suffixes}(v)$$</p>
+<p>最適な値となる$q$を</p>
+<p>$$q^* \leftarrow \operatorname{BinarySearchQ}(u, C_t)$$</p>
+<ul>
+<li>$\operatorname{BinarySearchQ}(u,C)$ : performs the binary search of $q^*$ that finds $g_u^{q^*}$<ul>
+<li>あるCのなかでSuffix $u$に対する最適なPrefix $g^*$となる$q^*$を返す関数</li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Python-Implementation-of-Find-joinable-row-pairs">Python Implementation of Find joinable row pairs<a class="anchor-link" href="#Python-Implementation-of-Find-joinable-row-pairs">&#182;</a></h3><p>では、<code>Algorithm 1 Find joinable row pairs</code> をPythonで実装してみましょう。<br>
+はじめに$\operatorname{BinarySearchQ}$について考えます。</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[30]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># BinarySearchQ</span>
+
+<span class="k">def</span> <span class="nf">binary_search_q</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">ct</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    u : string</span>
+<span class="sd">      Suffix string.</span>
+<span class="sd">    ct : Series</span>
+<span class="sd">      A column in T_t</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="k">while</span> <span class="n">a</span> <span class="o">&lt;</span> <span class="n">b</span><span class="p">:</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="p">(</span><span class="n">b</span> <span class="o">-</span> <span class="n">a</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span> 
+        <span class="n">rt</span> <span class="o">=</span> <span class="n">query_index</span><span class="p">(</span><span class="n">ct</span><span class="p">,</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">h</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">rt</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">a</span> <span class="o">=</span> <span class="n">h</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">b</span> <span class="o">=</span> <span class="n">h</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">-</span> <span class="mi">1</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[4]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># FindJoinableRowPairs</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This function is based on </span>
+<span class="sd">- Algorithm 1 Find joinable row pairs</span>
+<span class="sd">- Algorithm 3 Complete pseudo code for joinable row pair</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="k">def</span> <span class="nf">find_joinable_row_pairs</span><span class="p">(</span><span class="n">ts</span><span class="p">,</span> <span class="n">tt</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ts: DataFrame</span>
+<span class="sd">      T_s subject table</span>
+<span class="sd">    tt: DataFrame</span>
+<span class="sd">      T_t target table</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">cs</span> <span class="ow">in</span> <span class="n">ts</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">ct</span> <span class="ow">in</span> <span class="n">keycolumns</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
+            <span class="n">cs</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">optimal_qgram</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">ct</span><span class="p">))</span>     
+            
+    <span class="k">return</span> <span class="n">cs</span><span class="o">.</span><span class="n">groupby</span><span class="p">()</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s1">&#39;score&#39;</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>それでは参照論文の疑似コードと対比して見ていきましょう。</p>
+<ul>
+<li>$\operatorname{KeyColumns}(T)$ : returns all the single columns that is part of a key column in the table $T$.</li>
+<li>$\operatorname{Suffixes}(v)$ : returns all suffixes of a value $v$.</li>
+<li>$\operatorname{QueryIndex}(C,g)$ : uses a suffix array index built for the column $C$, and returns a list of rows containing $g$.</li>
+<li>$\operatorname{MaxByScore}$ : returns the optimal row pairs with the hightest score.</li>
+<li>$q^*$ : leads to the highest score should results in the smallest possible non-zero number of matches in $C_t$.<ul>
+<li>マッチ数が少なければ$\frac{1}{mn}$は大きくなる</li>
+</ul>
+</li>
+<li>$r_t$ : the matching rows in $C_t$ returned by $\operatorname{QueryIndex}$<ul>
+<li>calling $\operatorname{QueryIndex}(C_t,g_u^{q^*})$ results in $|r_t| \ge 1$, while calling $\operatorname{QueryIndex}(C_t,g_u^{q+1^*})$ results in $|r_t|=0$.</li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>$C_s$ is not needed in finding $g_u^{q^*}$とあるように、$q^*$の探索では、$T_t$のみに探索を行います。その理由としては</p>
+<ol>
+<li>$n=|r_s|&gt;0$が常に成り立つ</li>
+<li><p>when $m=|r_t|=0$, the score $\frac{1}{nm}$ becomes undefined and thus the corresponding $q$ is infeasible.
+Therefore, $q^*$ is only obtained at the conditions mentioned above, and is not dependent on $C_s$.</p>
+</li>
+<li><p>$\operatorname{BinarySearchQ}(u,C)$ performs the binary search of $q^*$ that finds $g_u^{q^*}$ in $C$.</p>
+</li>
+<li>最適な$q$、つまりサフィックスに対してもっとも長いプレフィックスを見つけることのできる$q$を、バイナリサーチをかけることで見つけます</li>
+<li>$q\lt3$のときはパフォーマンスに影響が出るため、ブレイカーを設けている</li>
+</ol>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>続いて、Learn Transformations についても同様に理論を理解し、Pythonでの実装を進めますが、これについては、日を追って加筆を行います。</p>
+
+</div>
+</div>
 </div>
     </div>
   </div>
