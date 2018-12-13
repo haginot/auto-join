@@ -12263,14 +12263,128 @@ u \in \operatorname{Suffixes}(v)}
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <h3 id="Python-Implementation-of-Find-joinable-row-pairs">Python Implementation of Find joinable row pairs<a class="anchor-link" href="#Python-Implementation-of-Find-joinable-row-pairs">&#182;</a></h3><p>では、<code>Algorithm 1 Find joinable row pairs</code> をPythonで実装してみましょう。<br>
-はじめに$\operatorname{BinarySearchQ}$について考えます。</p>
+表のデータ構造として、<code>pandas.DataFrame</code>を使うことにする。</p>
 
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[30]:</div>
+<div class="prompt input_prompt">In&nbsp;[113]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="n">ts</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([</span>
+  <span class="p">(</span><span class="s1">&#39;Barack Obama&#39;</span><span class="p">,</span> <span class="s1">&#39;52.93%&#39;</span><span class="p">),</span>
+  <span class="p">(</span><span class="s1">&#39;George W. Bush&#39;</span><span class="p">,</span> <span class="s1">&#39;47.87%&#39;</span><span class="p">),</span>
+  <span class="p">(</span><span class="s1">&#39;Bill Clinton&#39;</span><span class="p">,</span> <span class="s1">&#39;43.01%&#39;</span><span class="p">),</span>
+  <span class="p">(</span><span class="s1">&#39;George H. W. Bush&#39;</span><span class="p">,</span> <span class="s1">&#39;53.37%&#39;</span><span class="p">),</span>
+  <span class="p">(</span><span class="s1">&#39;Ronald Reagan&#39;</span><span class="p">,</span> <span class="s1">&#39;50.75%&#39;</span><span class="p">),</span>
+<span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;President&#39;</span><span class="p">,</span> <span class="s1">&#39;Popular Vote&#39;</span><span class="p">])</span>
+
+<span class="n">tt</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([</span>
+    <span class="p">(</span><span class="s1">&#39;Obama, Barack(1961-)&#39;</span><span class="p">,</span> <span class="mf">47.0</span><span class="p">),</span>
+    <span class="p">(</span><span class="s1">&#39;Bush, George W.(1946-)&#39;</span><span class="p">,</span> <span class="mf">49.4</span><span class="p">),</span>
+    <span class="p">(</span><span class="s1">&#39;Clinton, Bill(1946-)&#39;</span><span class="p">,</span> <span class="mf">55.1</span><span class="p">),</span>
+    <span class="p">(</span><span class="s1">&#39;Bush, George H. W.(1924-)&#39;</span><span class="p">,</span> <span class="mf">60.9</span><span class="p">),</span>
+    <span class="p">(</span><span class="s1">&#39;Regan, Ronald(1911-2004)&#39;</span><span class="p">,</span> <span class="mf">52.8</span><span class="p">)</span>
+<span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;President&#39;</span><span class="p">,</span> <span class="s1">&#39;Approval Rating&#39;</span><span class="p">])</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>それでは参照論文の疑似コードと対比して見ていきましょう。</p>
+<ul>
+<li>$\operatorname{KeyColumns}(T)$ : returns all the single columns that is part of a key column in the table $T$.<ul>
+<li><code>pandas.DataFrame</code>を使うことでイテレータを利用できるため、今回は<code>dtype = 'object'</code>のものに絞った<code>DataFrame</code>のイテレータを返すようにしました</li>
+</ul>
+</li>
+<li>$\operatorname{Suffixes}(v)$ : returns all suffixes of a value $v$.<ul>
+<li>一致する$q$-gramを探す議論のなかで例示したように、与えられた$v$に対するすべてのsuffixをリストを返します</li>
+</ul>
+</li>
+<li>$\operatorname{QueryIndex}(C,g)$ : uses a suffix array index built for the column $C$, and returns a list of rows containing $g$.<ul>
+<li><code>panras.Series</code>を渡して与えられた$g$を含む要素を返すようにしました</li>
+</ul>
+</li>
+<li>$\operatorname{SortByScore}$</li>
+<li>$\operatorname{MaxByScore}$ : returns the optimal row pairs with the hightest score.</li>
+<li>$q^*$ : leads to the highest score should results in the smallest possible non-zero number of matches in $C_t$.<ul>
+<li>マッチ数が少なければ$\frac{1}{mn}$は大きくなる</li>
+</ul>
+</li>
+<li>$r_t$ : the matching rows in $C_t$ returned by $\operatorname{QueryIndex}$<ul>
+<li>calling $\operatorname{QueryIndex}(C_t,g_u^{q^*})$ results in $|r_t| \ge 1$, while calling $\operatorname{QueryIndex}(C_t,g_u^{q+1^*})$ results in $|r_t|=0$.</li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[139]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># KeyColumns(T)</span>
+<span class="k">def</span> <span class="nf">key_columns</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">tt</span><span class="o">.</span><span class="n">select_dtypes</span><span class="p">(</span><span class="n">include</span><span class="o">=</span><span class="s1">&#39;object&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span>
+
+
+<span class="c1"># Suffixes(v)</span>
+<span class="k">def</span> <span class="nf">suffixes</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">v</span><span class="p">[</span><span class="n">c</span><span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">))]</span>
+
+
+<span class="c1"># QueryIndex(C, g)</span>
+<span class="k">def</span> <span class="nf">query_index</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">g</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">c</span><span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">g</span><span class="p">)]</span>
+
+
+<span class="c1"># SortByScore</span>
+<span class="k">def</span> <span class="nf">sort_by_score</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span><span class="o">-</span><span class="n">t</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+
+<span class="c1"># MaxByScore</span>
+<span class="k">def</span> <span class="nf">max_by_score</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">sort_by_score</span><span class="p">(</span><span class="n">m</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<span class="c1"># Pairs</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="k">import</span> <span class="n">product</span>
+<span class="k">def</span> <span class="nf">pairs</span><span class="p">(</span><span class="n">rs</span><span class="p">,</span> <span class="n">rt</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">product</span><span class="p">(</span><span class="n">rs</span><span class="p">,</span> <span class="n">rt</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>$FindJoinableRowPairs$を実装するまえに、$BinarySearchQ$について考えていきます。
+先にも説明をしましたが、$\operatorname{BinarySearchQ}(u,C)$は、あるCのなかでSuffix $u$に対する最適なPrefix $g^*$となるような最高な$q^*$を返す関数です。
+下記の実装でも示すように、$h\leftarrow a+(b-a)/2$とすることで、効率的なバイナリサーチができるようになります。</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[106]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># BinarySearchQ</span>
@@ -12287,9 +12401,10 @@ u \in \operatorname{Suffixes}(v)}
     <span class="n">a</span> <span class="o">=</span> <span class="mi">3</span>
     <span class="n">b</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
     <span class="k">while</span> <span class="n">a</span> <span class="o">&lt;</span> <span class="n">b</span><span class="p">:</span>
-        <span class="n">h</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="p">(</span><span class="n">b</span> <span class="o">-</span> <span class="n">a</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span> 
-        <span class="n">rt</span> <span class="o">=</span> <span class="n">query_index</span><span class="p">(</span><span class="n">ct</span><span class="p">,</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">h</span><span class="p">])</span>
-        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">rt</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">a</span> <span class="o">+</span> <span class="p">(</span><span class="n">b</span> <span class="o">-</span> <span class="n">a</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">rt</span> <span class="o">=</span> <span class="n">query_index</span><span class="p">(</span><span class="n">ct</span><span class="p">,</span> <span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">h</span><span class="p">])</span>
+        <span class="c1"># TODO implement absolute value</span>
+        <span class="k">if</span> <span class="n">rt</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">a</span> <span class="o">=</span> <span class="n">h</span> <span class="o">+</span> <span class="mi">1</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">b</span> <span class="o">=</span> <span class="n">h</span>
@@ -12301,9 +12416,55 @@ u \in \operatorname{Suffixes}(v)}
 </div>
 
 </div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>最適な$q$-gramを決めるために、セルの値$v$のすべてのSuffixに対して、$BinarySearchQ(v)$を計算し、それぞれの$q$とそのときの$\frac{1}{nm}$を求め、値が最大のものを返すような操作をします。</p>
+
+</div>
+</div>
+</div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[4]:</div>
+<div class="prompt input_prompt">In&nbsp;[144]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># OptimalQgram</span>
+
+<span class="k">def</span> <span class="nf">optimal_qgram</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">ct</span><span class="p">):</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">suffixes</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="n">binary_search_q</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">ct</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">q</span> <span class="o">&lt;</span> <span class="mi">3</span> <span class="ow">or</span> <span class="n">q</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">u</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">q</span><span class="p">]</span>
+        <span class="n">rs</span> <span class="o">=</span> <span class="n">query_index</span><span class="p">(</span><span class="n">cs</span><span class="p">,</span> <span class="n">g</span><span class="p">)</span>
+        <span class="n">rt</span> <span class="o">=</span> <span class="n">query_index</span><span class="p">(</span><span class="n">ct</span><span class="p">,</span> <span class="n">g</span><span class="p">)</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="n">rs</span><span class="o">.</span><span class="n">size</span><span class="o">*</span><span class="n">rt</span><span class="o">.</span><span class="n">size</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="p">[(</span><span class="n">g</span><span class="p">,</span> <span class="n">ks</span><span class="p">,</span> <span class="n">kt</span><span class="p">,</span> <span class="n">score</span><span class="p">)</span> <span class="k">for</span> <span class="n">ks</span><span class="p">,</span> <span class="n">kt</span> <span class="ow">in</span> <span class="n">pairs</span><span class="p">(</span><span class="n">rs</span><span class="p">,</span> <span class="n">rt</span><span class="p">)]</span>
+        <span class="n">res</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">max_by_score</span><span class="p">(</span><span class="n">m</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">res</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>ここまでで定義してきた関数を用いて、$FindJoinableRowPairs$を実装してみましょう。
+結果を見やすくするために、暫定的にアウトプットを<code>pandas.DataFrame</code>にしています。</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[159]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># FindJoinableRowPairs</span>
@@ -12321,11 +12482,12 @@ u \in \operatorname{Suffixes}(v)}
 <span class="sd">    tt: DataFrame</span>
 <span class="sd">      T_t target table</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">for</span> <span class="n">cs</span> <span class="ow">in</span> <span class="n">ts</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">ct</span> <span class="ow">in</span> <span class="n">keycolumns</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
-            <span class="n">cs</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">optimal_qgram</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">ct</span><span class="p">))</span>     
+    <span class="n">m</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">ks</span><span class="p">,</span> <span class="n">cs</span> <span class="ow">in</span> <span class="n">ts</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">ks</span><span class="p">,</span> <span class="n">ct</span> <span class="ow">in</span> <span class="n">key_columns</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
+            <span class="n">m</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cs</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">optimal_qgram</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">ct</span><span class="p">)))</span>
             
-    <span class="k">return</span> <span class="n">cs</span><span class="o">.</span><span class="n">groupby</span><span class="p">()</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s1">&#39;score&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">m</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
 </pre></div>
 
 </div>
@@ -12337,24 +12499,92 @@ u \in \operatorname{Suffixes}(v)}
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>それでは参照論文の疑似コードと対比して見ていきましょう。</p>
-<ul>
-<li>$\operatorname{KeyColumns}(T)$ : returns all the single columns that is part of a key column in the table $T$.</li>
-<li>$\operatorname{Suffixes}(v)$ : returns all suffixes of a value $v$.</li>
-<li>$\operatorname{QueryIndex}(C,g)$ : uses a suffix array index built for the column $C$, and returns a list of rows containing $g$.</li>
-<li>$\operatorname{MaxByScore}$ : returns the optimal row pairs with the hightest score.</li>
-<li>$q^*$ : leads to the highest score should results in the smallest possible non-zero number of matches in $C_t$.<ul>
-<li>マッチ数が少なければ$\frac{1}{mn}$は大きくなる</li>
-</ul>
-</li>
-<li>$r_t$ : the matching rows in $C_t$ returned by $\operatorname{QueryIndex}$<ul>
-<li>calling $\operatorname{QueryIndex}(C_t,g_u^{q^*})$ results in $|r_t| \ge 1$, while calling $\operatorname{QueryIndex}(C_t,g_u^{q+1^*})$ results in $|r_t|=0$.</li>
-</ul>
-</li>
-</ul>
+<p>それでは実際に、<code>Figure 1</code>のデータを渡して、結果を見てみましょう。</p>
 
 </div>
 </div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[162]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">find_joinable_row_pairs</span><span class="p">(</span><span class="n">ts</span><span class="p">,</span><span class="n">tt</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt output_prompt">Out[162]:</div>
+
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>President</th>
+      <th>Popular Vote</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>[(Barack, Barack Obama, Obama, Barack(1961-), ...</td>
+      <td>[]</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>[(George W., George W. Bush, Bush, George W.(1...</td>
+      <td>[]</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>[(Bill, Bill Clinton, Clinton, Bill(1946-), 1....</td>
+      <td>[]</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>[(George H. W., George H. W. Bush, Bush, Georg...</td>
+      <td>[]</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>[(Ronald, Ronald Reagan, Regan, Ronald(1911-20...</td>
+      <td>[]</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+</div>
+</div>
+
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
